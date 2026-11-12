@@ -1,0 +1,64 @@
+{
+  "name": "Google Cloud Study Jams 2026",
+  "programName": "Google Cloud Learn with Communities",
+  "community": "Google Developer Groups on Campus - Chandigarh University",
+  "year": 2026,
+  "deadline": "2026-11-23T23:59:59+05:30",
+  "timeZone": "Asia/Kolkata",
+  "totalBadges": 10,
+  "swag": {
+    "enabled": true,
+    "limit": 100,
+    "note": "Only the first 100 participants to complete all 10 skill badges will receive exclusive swag kits."
+  },
+  "tracks": {
+    "student": {
+      "label": "Student",
+      "curriculumUrl": "https://goo.gle/lwc-student-curriculum",
+      "badges": [
+        "The Basics of Google Cloud Compute",
+        "Configure Service Accounts and IAM Roles for Google Cloud",
+        "Implement Speech and Language Solutions with Pre-trained APIs",
+        "Develop AI-Powered Prototypes in Google AI Studio",
+        "Analyze Images with the Cloud Vision API",
+        "Build a Website on Google Cloud",
+        "Create Your First Gemini Enterprise Application",
+        "Store, Process, and Manage Data on Google Cloud - Console",
+        "Using the Google Cloud Speech API",
+        "Explore Generative AI in Agent Platform"
+      ]
+    },
+    "developer": {
+      "label": "Developer",
+      "curriculumUrl": "https://goo.gle/lwc-developer-curriculum",
+      "badges": [
+        "The Basics of Google Cloud Compute",
+        "Configure Service Accounts and IAM Roles for Google Cloud",
+        "Implement Speech and Language Solutions with Pre-trained APIs",
+        "Develop AI-Powered Prototypes in Google AI Studio",
+        "Analyze Images with the Cloud Vision API",
+        "Prompt Design in Agent Platform",
+        "Explore Generative AI in Agent Platform",
+        "Create Your First Gemini Enterprise Application",
+        "Orchestrate Multi-agent Workflows with Gemini Enterprise",
+        "Google DeepMind: Train A Small Language Model"
+      ]
+    }
+  },
+  "courses": [
+    { "title": "The Basics of Google Cloud Compute", "url": "https://www.skills.google/course_templates/754", "credits": 4 },
+    { "title": "Configure Service Accounts and IAM Roles for Google Cloud", "url": "https://www.skills.google/course_templates/702", "credits": 4 },
+    { "title": "Implement Speech and Language Solutions with Pre-trained APIs", "url": "https://www.skills.google/course_templates/700", "credits": 4 },
+    { "title": "Develop AI-Powered Prototypes in Google AI Studio", "url": "https://www.skills.google/course_templates/1426", "credits": 0 },
+    { "title": "Analyze Images with the Cloud Vision API", "url": "https://www.skills.google/course_templates/633", "credits": 12 },
+    { "title": "Build a Website on Google Cloud", "url": "https://www.skills.google/course_templates/638", "credits": 13 },
+    { "title": "Create Your First Gemini Enterprise Application", "url": "https://www.skills.google/course_templates/1586", "credits": 0 },
+    { "title": "Store, Process, and Manage Data on Google Cloud - Console", "url": "https://www.skills.google/course_templates/658", "credits": 3 },
+    { "title": "Using the Google Cloud Speech API", "url": "https://www.skills.google/course_templates/756", "credits": 4 },
+    { "title": "Explore Generative AI in Agent Platform", "url": "https://www.skills.google/course_templates/959", "credits": 16 },
+    { "title": "Prompt Design in Agent Platform", "url": "https://www.skills.google/course_templates/976", "credits": 4 },
+    { "title": "Orchestrate Multi-agent Workflows with Gemini Enterprise", "url": "https://www.skills.google/course_templates/1682", "credits": 0 },
+    { "title": "Google DeepMind: Train A Small Language Model", "url": "https://www.skills.google/course_templates/1453", "credits": 5 }
+  ],
+  "teams": []
+}

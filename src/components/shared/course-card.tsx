@@ -1,6 +1,4 @@
-'use client';
-
-import { Video, Gamepad2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import {
   Card,
@@ -9,57 +7,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { type Course } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import type { Course } from "@/lib/campaign";
 
-const difficultyColors = {
-  Beginner: "border-green-500/50 text-green-400",
-  Intermediate: "border-yellow-500/50 text-yellow-400",
-  Advanced: "border-red-500/50 text-red-400",
+type CourseCardProps = {
+  course: Course;
+  /** Position in the curriculum, starting at 1. */
+  number: number;
+  /** Participants on this track who have earned the badge. */
+  earnedBy: number;
 };
 
-export const CourseCard = ({ course }: { course: Course }) => {
-  const isArcade = course.id === 20;
+export const CourseCard = ({ course, number, earnedBy }: CourseCardProps) => {
+  const content = (
+    <Card className="flex flex-col h-full w-full transition-colors duration-300 hover:border-primary/60">
+      <CardHeader className="flex-row items-start justify-between gap-2 space-y-0 pb-2">
+        <CardTitle className="text-base font-medium leading-tight">
+          <span className="text-muted-foreground mr-1">{number}.</span>
+          {course.title}
+        </CardTitle>
+        {course.url && <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />}
+      </CardHeader>
+      <CardContent className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2 pb-4">
+        <Badge variant="outline" className="font-normal text-xs">
+          {course.credits === 0 ? "No credits needed" : `${course.credits} credits`}
+        </Badge>
+        <span className="text-xs text-muted-foreground">Earned by {earnedBy}</span>
+      </CardContent>
+    </Card>
+  );
 
+  if (!course.url) return content;
   return (
-    <Link href={course.csbLink} target="_blank" aria-label={`View course ${course.title}`} className="h-full">
-      <Card
-        className={cn(
-          "flex flex-col h-full w-full transition-all duration-300 group",
-          isArcade &&
-            "border-accent/50 hover:border-accent/80 bg-gradient-to-br from-accent/5 via-background to-background"
-        )}
-      >
-        <div className="relative z-10 flex flex-col h-full">
-          <CardHeader className="flex-row items-start justify-between pb-2">
-            <div className="flex-1">
-              <CardTitle
-                className={cn(
-                  "text-base font-medium leading-tight pr-2 transition-colors",
-                  isArcade && "text-accent"
-                )}
-              >
-                {isArcade ? `${course.title}` : course.title}
-              </CardTitle>
-            </div>
-            {isArcade && (
-              <Gamepad2 className="h-5 w-5 text-accent shrink-0" />
-            )}
-          </CardHeader>
-          <CardContent className="flex-grow pt-2 pb-4">
-            <Badge
-              variant="outline"
-              className={cn(
-                "font-normal text-xs transition-colors",
-                difficultyColors[course.difficulty],
-                isArcade && "border-accent/50 text-accent"
-              )}
-            >
-              {course.difficulty}
-            </Badge>
-          </CardContent>
-        </div>
-      </Card>
+    <Link href={course.url} target="_blank" aria-label={`Open ${course.title} on Google Skills`} className="h-full">
+      {content}
     </Link>
   );
 };

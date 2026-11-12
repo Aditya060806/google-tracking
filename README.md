@@ -20,9 +20,9 @@ The project leverages a modern, robust, and scalable tech stack:
 As per the project blueprint, the tracker includes:
 
 -   **🏠 Landing Page**: A central dashboard displaying key metrics like total participants, overall completion rate, and a countdown timer. It also highlights the top performers of the day.
--   **📚 Syllabus & Learning Path**: A dedicated section with 20 course cards, showing difficulty levels, completion status, and links to resources.
+-   **📚 Syllabus & Learning Path**: The 10 skill badges of the Student and Developer curricula, with credits needed, how many participants earned each badge, and links to Google Skills.
 -   **🏆 Progress & Leaderboard**: A live leaderboard of all participants, highlighting the top performers with special badges and medals.
--   **🤝 Team Leaderboard**: A view to showcase team rankings, mentor profiles, and team-wise progress charts.
+-   **🤝 Team Leaderboard**: Team rankings, mentors, and member progress (shown when teams are assigned in `data/teams.csv`).
 -   **ℹ️ About Section**: A static page with information about the Study Jams program, GDG CU, and the organizing team.
 -   **🌙 Dark Mode**: A sleek, user-friendly dark mode toggle, with the default set to dark for a modern feel.
 -   **📱 Fully Responsive**: A beautiful and consistent experience across all devices, from mobile to desktop.
@@ -56,15 +56,29 @@ Make sure you have the following installed on your development machine:
     npm run dev
     ```
 
-4.  Open http://localhost:3000 with your browser to see the result.
+4.  Open http://localhost:9002 with your browser to see the result.
 
-### Understanding the Data
+### Updating the Data (Daily)
 
-The project currently uses static data from JSON files to populate the leaderboards and user progress.
+Google emails a participant progress report (CSV) every day. To publish it:
 
-*   `src/database.json`: This file contains the main database of all participants, including their progress, rank, and team information.
+1.  Save the CSV in `data/reports/` with its original name, e.g. `GDGC-CUCHD [13 Nov].csv`. Keep the older reports there too: finishing order is worked out by comparing them.
+2.  Run `npm run ingest`. It reads every report and writes `src/data/leaderboard.json`.
+    *   `npm run dev` and `npm run build` run the ingest step automatically.
+    *   `npm run ingest:watch` regenerates the data as soon as a new CSV lands in the folder.
+3.  Commit `src/data/leaderboard.json` and push it to deploy.
 
-To customize the data, you can modify these files. The structure is self-explanatory and easy to update. Python scripts will be provided soon to create the JSON database.
+The raw CSVs contain participants' emails and access codes, so `data/reports/` and all `*.csv` files are gitignored. The generated file only holds names, public profile URLs and badge progress. If Google renames a column, the ingest step stops with a message naming the missing column.
+
+How the numbers are calculated (in `src/lib/leaderboard.ts`):
+
+*   **Progress**: skill badges completed out of 10, as counted by Google.
+*   **Rank**: the order in which participants completed all 10 badges, based on the first daily report that shows it. People who finished in the same report share a rank.
+*   **Swag eligible**: a rank within the swag limit (first 100 finishers by default).
+
+Campaign settings (name, deadline, both curricula with course links, swag rule, team colors and mentors) live in `src/config/campaign.json`.
+
+**Teams (optional):** add `data/teams.csv` with an `Email` column and a `Team` column, then run `npm run ingest`. The Teams page and nav link appear once at least one participant has a team.
 
 ## 🔧 Hosting & Deployment
 

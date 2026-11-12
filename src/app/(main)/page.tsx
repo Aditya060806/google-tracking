@@ -1,8 +1,5 @@
-
-"use client";
-
-import { useState, useEffect } from "react";
-import { Users, Award, Trophy } from "lucide-react";
+import Link from "next/link";
+import { Users, Award, Trophy, TrendingUp } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,161 +9,53 @@ import {
 } from "@/components/ui/card";
 import { Countdown } from "@/components/shared/countdown";
 import { Progress } from "@/components/ui/progress";
-import database from '@/database.json';
-import { teams as mockTeamsData } from "@/lib/mock-data";
-import type { Database, RawParticipant, Participant as ProcessedParticipant, Team } from '@/lib/types';
+import { campaign, formatDeadline } from "@/lib/campaign";
+import { formatReportDate } from "@/lib/dates";
+import { getLatestReport, getPreviousReport, getSummary, getTeams } from "@/lib/leaderboard";
+import type { Participant } from "@/lib/types";
 
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
-// --- Data Processing ---
-interface HomePageData {
-  totalParticipants: number;
-  avgBadges: number;
-  globalCompletion: number;
-  recentTopPerformer: ProcessedParticipant | null;
-  topTeam: Team | null;
-  swagEligibleCount: number;
+function NameList({ people, renderValue }: { people: Participant[]; renderValue: (p: Participant) => string }) {
+  return (
+    <ul className="w-full max-w-sm space-y-2">
+      {people.map((p) => (
+        <li key={p.id} className="flex items-center justify-between gap-4">
+          {p.profileUrl ? (
+            <Link href={p.profileUrl} target="_blank" className="font-medium hover:underline truncate">
+              {p.name}
+            </Link>
+          ) : (
+            <span className="font-medium truncate">{p.name}</span>
+          )}
+          <span className="text-sm font-semibold text-primary whitespace-nowrap">{renderValue(p)}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
-const processHomePageData = (db: Database): HomePageData => {
-  const participantsList = Object.values(db);
-  const totalParticipants = participantsList.length;
-
-  if (totalParticipants === 0) {
-    return {
-      totalParticipants: 0,
-      avgBadges: 0,
-      globalCompletion: 0,
-      recentTopPerformer: null,
-      topTeam: null,
-      swagEligibleCount: 0,
-    };
-  }
-
-  let swagEligibleCount = 0;
-
-  const processedParticipants: ProcessedParticipant[] = participantsList.map(p => {
-    const totalCompletions = p.progress.SkillBadgesCount + p.progress.ArcadeGamesCount;
-    const progressPercentage = Math.min(Math.round((totalCompletions / 20) * 100), 100);
-    const rank = p.progress.Rank;
-    const isSwagEligible = progressPercentage === 100 && typeof rank === 'number' && rank <= 100;
-    if (isSwagEligible) {
-        swagEligibleCount++;
-    }
-    
-    return {
-      rank: rank,
-      name: p.fullName,
-      progressPercentage: progressPercentage,
-      badgesCompleted: totalCompletions,
-      isSwagEligible: isSwagEligible,
-      profileUrl: p.profileUrl,
-      teamName: p.teamName || 'N/A',
-    };
-  });
-
-  // --- Sort Participants for Top Performer ---
-  const rankedParticipants = processedParticipants.filter(p => typeof p.rank === 'number');
-  const unrankedParticipants = processedParticipants.filter(p => typeof p.rank !== 'number');
-  rankedParticipants.sort((a, b) => (a.rank as number) - (b.rank as number));
-  unrankedParticipants.sort((a, b) => {
-    if (b.progressPercentage !== a.progressPercentage) return b.progressPercentage - a.progressPercentage;
-    return a.name.localeCompare(b.name);
-  });
-  const sortedParticipants = [...rankedParticipants, ...unrankedParticipants];
-
-  // --- Find Recent Top Performer (last person to get 100%) ---
-  const completers = processedParticipants.filter(p => p.progressPercentage === 100 && typeof p.rank === 'number');
-  completers.sort((a, b) => (b.rank as number) - (a.rank as number));
-  const recentTopPerformer = completers.length > 0 ? completers[0] : null;
-
-
-  // --- Calculate metrics based on Top 100 ---
-  const top100Participants = sortedParticipants.slice(0, 100);
-  const top100TotalBadges = top100Participants.reduce((sum, p) => sum + p.badgesCompleted, 0);
-  const top100TotalProgressSum = top100Participants.reduce((sum, p) => sum + p.progressPercentage, 0);
-  
-  const avgBadges = top100Participants.length > 0 ? parseFloat((top100TotalBadges / top100Participants.length).toFixed(1)) : 0;
-  const globalCompletion = top100Participants.length > 0 ? Math.round(top100TotalProgressSum / top100Participants.length) : 0;
-
-
-  // --- Process Teams for Top Team ---
-  const teamsMap = new Map<string, RawParticipant[]>();
-  participantsList.forEach(p => {
-    if (p.teamName && p.teamName !== 'N/A') {
-      if (!teamsMap.has(p.teamName)) teamsMap.set(p.teamName, []);
-      teamsMap.get(p.teamName)!.push(p);
-    }
-  });
-
-  const teams: Team[] = Array.from(teamsMap.entries()).map(([name, members]) => {
-    const processedMembers: ProcessedParticipant[] = members.map(p => {
-        const totalCompletions = p.progress.SkillBadgesCount + p.progress.ArcadeGamesCount;
-        const progressPercentage = Math.min(Math.round((totalCompletions / 20) * 100), 100);
-        const rank = p.progress.Rank;
-        const isSwagEligible = progressPercentage === 100 && typeof rank === 'number' && rank <= 100;
-
-        return {
-            rank: rank,
-            name: p.fullName,
-            progressPercentage: progressPercentage,
-            badgesCompleted: totalCompletions,
-            isSwagEligible: isSwagEligible,
-            profileUrl: p.profileUrl,
-            teamName: p.teamName || 'N/A',
-        };
-    });
-
-    const teamProgressPercentage = processedMembers.length > 0 ? Math.round(
-      processedMembers.reduce((sum, p) => sum + p.progressPercentage, 0) / processedMembers.length
-    ) : 0;
-    
-    const mockTeam = mockTeamsData.find(t => t.name === name);
-
-    return {
-      name,
-      color: mockTeam?.color || 'hsl(var(--foreground))',
-      mentor: mockTeam?.mentor || { name: 'Unknown Mentor', avatar: '' },
-      members: processedMembers,
-      progressPercentage: teamProgressPercentage,
-      completionCount: processedMembers.filter(p => p.progressPercentage === 100).length,
-    } as Team;
-  });
-
-  const sortedTeams = teams
-    .sort((a, b) => b.progressPercentage - a.progressPercentage)
-    .map((team, i) => ({ ...team, rank: i + 1 }));
-
-  return {
-    totalParticipants,
-    avgBadges,
-    globalCompletion,
-    recentTopPerformer,
-    topTeam: sortedTeams.length > 0 ? sortedTeams[0] : null,
-    swagEligibleCount,
-  };
-};
-
 export default function LandingPage() {
-  const [jamEndDate] = useState(new Date("2025-11-11T23:59:59"));
-  const [pageData, setPageData] = useState<HomePageData | null>(null);
-
-  useEffect(() => {
-    const data = processHomePageData(database as Database);
-    setPageData(data);
-  }, []);
-  
-  const topTeam = pageData?.topTeam;
-  const recentTopPerformer = pageData?.recentTopPerformer;
+  const summary = getSummary();
+  const latestReport = getLatestReport();
+  const previousReport = getPreviousReport();
+  const topTeam = getTeams()[0] ?? null;
+  const finishersShown = summary.latestFinishers.slice(0, 5);
 
   return (
     <div className="container mx-auto py-8 md:py-12 px-4 md:px-6">
       <section className="text-center mb-12 md:mb-16">
         <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">
-          Google Cloud Study Jams
+          {campaign.name}
         </h1>
         <p className="max-w-[800px] mx-auto text-lg text-muted-foreground">
-          Google Developer Groups on Campus - Chandigarh University (Live Progress)
+          {campaign.community} (Live Progress)
         </p>
+        {latestReport && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Updated from Google&apos;s daily report of {formatReportDate(latestReport.date)}
+          </p>
+        )}
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-12 md:mb-16">
@@ -176,90 +65,129 @@ export default function LandingPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pageData?.totalParticipants ?? '...'}</div>
-            <p className="text-xs text-muted-foreground">Jammers on the board</p>
+            <div className="text-2xl font-bold">{summary.enrolled}</div>
+            <p className="text-xs text-muted-foreground">
+              {summary.redeemed} redeemed their access code, {summary.active} earned at least one badge
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Badges/Person (Top 100)</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed All {campaign.totalBadges} Badges</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pageData?.avgBadges ?? '...'}</div>
-            <p className="text-xs text-muted-foreground">Average badges earned</p>
+            <div className="text-2xl font-bold">{summary.completed}</div>
+            <p className="text-xs text-muted-foreground">
+              {plural(summary.completedByTrack.student, "student")}, {plural(summary.completedByTrack.developer, "developer")}
+            </p>
           </CardContent>
         </Card>
-        <Card className="lg:col-span-1">
+        <Card className="md:col-span-2 lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Jam Ends In</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Countdown targetDate={jamEndDate} />
+            <Countdown targetDate={campaign.deadline} />
+            <p className="mt-2 text-xs text-muted-foreground">Deadline: {formatDeadline()}, no extensions</p>
           </CardContent>
         </Card>
-        <Card className="lg:col-span-3">
+        <Card className="md:col-span-2 lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Overall Completion</CardTitle>
+            <CardDescription>
+              {summary.badgesEarned} of {summary.badgesPossible} possible skill badges earned across all participants.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-4">
+              <Progress value={summary.overallProgress} className="h-3" />
+              <span className="text-lg font-bold text-primary">{summary.overallProgress}%</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              {summary.milestones.map(({ level, count }) => (
+                <div key={level}>
+                  <div className="text-2xl font-bold">{count}</div>
+                  <p className="text-xs text-muted-foreground">reached Milestone {level}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {campaign.swag.enabled && (
+          <Card className="md:col-span-2 lg:col-span-3">
             <CardHeader>
-                <CardTitle className="text-sm font-medium">Global Completion Rate (Top 100)</CardTitle>
-                 <CardDescription>Average progress across top 100 participants.</CardDescription>
+              <CardTitle className="text-sm font-medium">Swag Eligibility Progress</CardTitle>
+              <CardDescription>{campaign.swag.note}</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex items-center gap-4">
-                    <Progress value={pageData?.globalCompletion} className="h-3" />
-                    <span className="text-lg font-bold text-primary">{pageData?.globalCompletion ?? 0}%</span>
-                </div>
+              <div className="flex items-center gap-4">
+                <Progress value={Math.min(summary.swagEligible, campaign.swag.limit)} max={campaign.swag.limit} className="h-3" />
+                <span className="text-lg font-bold text-primary whitespace-nowrap">
+                  {Math.min(summary.swagEligible, campaign.swag.limit)}/{campaign.swag.limit}
+                </span>
+              </div>
             </CardContent>
-        </Card>
-         <Card className="lg:col-span-3">
-            <CardHeader>
-                <CardTitle className="text-sm font-medium">Swag Eligibility Progress</CardTitle>
-                <CardDescription>Only the first 100 participants with 100% completion get swags!</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-center gap-4">
-                    <Progress value={(pageData?.swagEligibleCount ?? 0)} max={100} className="h-3" />
-                    <span className="text-lg font-bold text-primary">{pageData?.swagEligibleCount ?? 0}/100</span>
-                </div>
-            </CardContent>
-        </Card>
+          </Card>
+        )}
       </section>
 
-       <section className="mb-12 md:mb-16">
+      <section className="mb-12 md:mb-16">
         <h2 className="text-3xl font-bold text-center mb-8">Leaderboard Highlights</h2>
         <div className="grid gap-8 md:grid-cols-2">
-          <Card className="flex flex-col items-center justify-center p-6">
-            <CardTitle className="mb-4">Recent Top Performer</CardTitle>
-            {recentTopPerformer ? (
+          <Card className="flex flex-col items-center p-6">
+            <CardTitle className="mb-1 text-center">Latest Finishers</CardTitle>
+            {summary.latestFinishDate ? (
               <>
-                <div className="text-xl font-bold mb-2">{recentTopPerformer.name}</div>
-                <div className="text-center">
-                    <span className="text-2xl font-bold text-primary">{recentTopPerformer.progressPercentage}%</span>
-                    <p className="text-xs text-muted-foreground">Overall Progress</p>
-                </div>
+                <CardDescription className="mb-4 text-center">
+                  Completed all {campaign.totalBadges} badges{" "}
+                  {summary.latestFinishDateIsFirstReport ? "by" : "on"} {formatReportDate(summary.latestFinishDate)}
+                </CardDescription>
+                <NameList people={finishersShown} renderValue={(p) => `Rank ${p.rank}`} />
+                {summary.latestFinishers.length > finishersShown.length && (
+                  <Link href="/progress" className="mt-4 text-sm text-primary hover:underline">
+                    and {summary.latestFinishers.length - finishersShown.length} more
+                  </Link>
+                )}
               </>
             ) : (
-              <div className="text-sm text-muted-foreground">Loading...</div>
+              <p className="mt-4 text-sm text-muted-foreground">Nobody has completed all {campaign.totalBadges} badges yet.</p>
             )}
           </Card>
-           <Card className="flex flex-col items-center justify-center p-6">
-            <CardTitle className="mb-4">Top Performing Team</CardTitle>
-            {topTeam ? (
+          {topTeam ? (
+            <Card className="flex flex-col items-center justify-center p-6">
+              <CardTitle className="mb-4">Top Performing Team</CardTitle>
+              <div className="text-xl font-bold mb-2" style={{ color: topTeam.color }}>{topTeam.name}</div>
+              <div className="text-center">
+                <span className="text-2xl font-bold text-primary">{topTeam.progress}%</span>
+                <p className="text-xs text-muted-foreground">Avg. Team Progress</p>
+              </div>
+            </Card>
+          ) : (
+            <Card className="flex flex-col items-center p-6">
+              <CardTitle className="mb-1 flex items-center gap-2 text-center">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Biggest Jumps
+              </CardTitle>
+              {previousReport ? (
                 <>
-                    <div className="text-xl font-bold mb-2" style={{color: topTeam.color}}>{topTeam.name}</div>
-                     <div className="text-center">
-                        <span className="text-2xl font-bold text-primary">{topTeam.progressPercentage}%</span>
-                        <p className="text-xs text-muted-foreground">Avg. Team Progress</p>
-                    </div>
+                  <CardDescription className="mb-4 text-center">
+                    Most badges earned since {formatReportDate(previousReport.date, { year: false })}
+                  </CardDescription>
+                  {summary.topMovers.length > 0 ? (
+                    <NameList people={summary.topMovers} renderValue={(p) => `+${plural(p.gained ?? 0, "badge")}`} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No new badges since the previous report.</p>
+                  )}
                 </>
-            ) : (
-                <div className="text-sm text-muted-foreground">Loading...</div>
-            )}
-          </Card>
+              ) : (
+                <p className="mt-4 text-sm text-muted-foreground">Shown once there are two daily reports.</p>
+              )}
+            </Card>
+          )}
         </div>
       </section>
     </div>
   );
 }
-
-    

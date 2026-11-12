@@ -50,3 +50,10 @@ firestore-debug.log
 # database
 database.json
 src/database.json
+
+# Google progress reports contain participant emails and access codes.
+# Never commit them. Only the sanitized src/data/leaderboard.json is committed.
+*.csv
+*.xlsx
+/data/reports/*
+!/data/reports/.gitkeep

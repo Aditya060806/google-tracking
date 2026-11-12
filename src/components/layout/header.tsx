@@ -5,21 +5,23 @@ import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { GdgCuLogo } from "@/components/icons/gdg-cu-logo"
 import { useState } from "react"
 
-const navLinks = [
+const allNavLinks = [
   { href: "/", label: "Home" },
   { href: "/syllabus", label: "Syllabus" },
   { href: "/progress", label: "Progress" },
   { href: "/teams", label: "Teams" },
 ]
 
-export function Header() {
+/** `showTeams` hides the Teams link when no team assignments exist. */
+export function Header({ showTeams = true }: { showTeams?: boolean }) {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navLinks = showTeams ? allNavLinks : allNavLinks.filter((link) => link.href !== "/teams")
 
   const NavLinks = ({ className, onLinkClick }: { className?: string; onLinkClick?: () => void; }) => (
     <nav className={cn("flex items-center space-x-4 lg:space-x-6", className)}>
@@ -62,6 +64,7 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="pr-0">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
               <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="mr-6 flex items-center space-x-2">
                  <GdgCuLogo />
               </Link>

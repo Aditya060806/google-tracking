@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto, Roboto_Mono as RobotoMono } from "next/font/google";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { campaign } from "@/lib/campaign";
 import "./globals.css";
 
 const fontSans = Roboto({
@@ -16,7 +17,7 @@ const fontMono = RobotoMono({
 });
 
 export const metadata: Metadata = {
-  title: "GDG CU - Google Cloud Study Jams Official Tracker",
+  title: `GDG CU - ${campaign.name} Official Tracker`,
   description: "Daily updates, track CU's community progress in the Google Cloud Study Jams!",
   icons: {
     icon: 'https://cloud.namanvrati.me/images/GDG%20Red%20(Transparent%20Background).png',

@@ -3,50 +3,49 @@
 import { useState, useEffect } from "react";
 
 type TimeUnit = "Days" | "Hours" | "Minutes" | "Seconds";
+type TimeLeft = { days: number; hours: number; minutes: number; seconds: number };
 
-const TimeBlock = ({ value, unit }: { value: number; unit: TimeUnit }) => (
+const TimeBlock = ({ value, unit }: { value: number | null; unit: TimeUnit }) => (
   <div className="flex flex-col items-center">
-    <div className="text-2xl md:text-4xl font-bold text-primary">
-      {String(value).padStart(2, '0')}
+    <div className="text-2xl md:text-4xl font-bold text-primary tabular-nums">
+      {value === null ? "--" : String(value).padStart(2, '0')}
     </div>
     <div className="text-xs text-muted-foreground">{unit}</div>
   </div>
 );
 
-export function Countdown({ targetDate }: { targetDate: Date }) {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+function getTimeLeft(target: number): TimeLeft {
+  const difference = Math.max(0, target - Date.now());
+  return {
+    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+    minutes: Math.floor((difference / 1000 / 60) % 60),
+    seconds: Math.floor((difference / 1000) % 60),
+  };
+}
+
+/** Counts down to `targetDate`, an ISO date-time with an explicit offset (e.g. "2026-11-23T23:59:59+05:30"). */
+export function Countdown({ targetDate }: { targetDate: string }) {
+  // Starts empty so the server render and the first client render match.
+  const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
-
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((difference / 1000 / 60) % 60);
-        const seconds = Math.floor((difference / 1000) % 60);
-        setTimeLeft({ days, hours, minutes, seconds });
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        clearInterval(timer);
-      }
-    }, 1000);
-
+    const target = new Date(targetDate).getTime();
+    const tick = () => {
+      setTimeLeft(getTimeLeft(target));
+      if (Date.now() >= target) clearInterval(timer);
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(timer);
   }, [targetDate]);
 
   return (
     <div className="flex space-x-4 md:space-x-8">
-      <TimeBlock value={timeLeft.days} unit="Days" />
-      <TimeBlock value={timeLeft.hours} unit="Hours" />
-      <TimeBlock value={timeLeft.minutes} unit="Minutes" />
-      <TimeBlock value={timeLeft.seconds} unit="Seconds" />
+      <TimeBlock value={timeLeft?.days ?? null} unit="Days" />
+      <TimeBlock value={timeLeft?.hours ?? null} unit="Hours" />
+      <TimeBlock value={timeLeft?.minutes ?? null} unit="Minutes" />
+      <TimeBlock value={timeLeft?.seconds ?? null} unit="Seconds" />
     </div>
   );
 }
